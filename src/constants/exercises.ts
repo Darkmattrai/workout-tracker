@@ -74,6 +74,8 @@ export const DEFAULT_EXERCISES: Exercise[] = [
 
   // CORE
   { id: 'e056', name: 'Plank', primaryMuscle: 'core', muscleGroups: ['core'], equipment: 'bodyweight', isCustom: false },
+  { id: 'e073', name: 'Dead Bug', primaryMuscle: 'core', muscleGroups: ['core'], equipment: 'bodyweight', isCustom: false },
+  { id: 'e074', name: 'Bird Dog', primaryMuscle: 'core', muscleGroups: ['core'], equipment: 'bodyweight', isCustom: false },
   { id: 'e057', name: 'Cable Crunch', primaryMuscle: 'core', muscleGroups: ['core'], equipment: 'cable', isCustom: false },
   { id: 'e058', name: 'Hanging Leg Raise', primaryMuscle: 'core', muscleGroups: ['core'], equipment: 'bodyweight', isCustom: false },
   { id: 'e059', name: 'Ab Wheel Rollout', primaryMuscle: 'core', muscleGroups: ['core'], equipment: 'other', isCustom: false },

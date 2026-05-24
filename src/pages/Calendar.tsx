@@ -27,9 +27,9 @@ import { useNavigate } from 'react-router-dom'
 import { TopBar } from '../components/layout/TopBar'
 import { Button } from '../components/ui/Button'
 import { useAppContext } from '../context/AppContext'
-import { extractTextFromPDF } from '../lib/pdfParser'
+import { extractTextFromPDF, parseAllWorkoutsFromText, convertToWorkoutTemplate } from '../lib/pdfParser'
 import { parsePlanFromText, buildTrainingPlan } from '../lib/planParser'
-import type { TrainingPlan, ScheduledEntry } from '../types'
+import type { TrainingPlan, ScheduledEntry, WorkoutTemplate, Exercise } from '../types'
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -129,15 +129,17 @@ function DayCell({ date, entry, onClickEntry, onSkip }: DayCellProps) {
 
 interface ImportModalProps {
   onClose: () => void
-  onImport: (plan: TrainingPlan) => void
-  templates: ReturnType<typeof useAppContext>['state']['workoutTemplates']
+  onImport: (plan: TrainingPlan, workoutTemplates: WorkoutTemplate[]) => void
+  templates: WorkoutTemplate[]
+  exercises: Exercise[]
 }
 
-function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
+function ImportModal({ onClose, onImport, templates, exercises }: ImportModalProps) {
   const [step, setStep] = useState<'upload' | 'preview'>('upload')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<TrainingPlan | null>(null)
+  const [newTemplates, setNewTemplates] = useState<WorkoutTemplate[]>([])
   const [startDate, setStartDate] = useState(
     format(addDays(new Date(), (8 - new Date().getDay()) % 7 || 7), 'yyyy-MM-dd')
   )
@@ -148,13 +150,22 @@ function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
     setError(null)
     try {
       const text = await extractTextFromPDF(file)
+
+      // Parse workout templates (Workout A, Workout B, etc.) from the PDF
+      const parsedWorkouts = parseAllWorkoutsFromText(text, exercises)
+      const builtTemplates = parsedWorkouts.map((pw) => convertToWorkoutTemplate(pw, exercises))
+
       const parsed = parsePlanFromText(text)
       if (parsed.schedule.length === 0) {
         setError('Could not detect a weekly schedule in this PDF. Make sure it has day names (Mon, Tue, …).')
         setLoading(false)
         return
       }
-      const plan = buildTrainingPlan(parsed, templates, parseISO(startDate))
+
+      // Build plan matching labels against both existing templates AND newly parsed ones
+      const allTemplates = [...templates, ...builtTemplates]
+      const plan = buildTrainingPlan(parsed, allTemplates, parseISO(startDate))
+      setNewTemplates(builtTemplates)
       setPreview(plan)
       setStep('preview')
     } catch (err) {
@@ -167,6 +178,7 @@ function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
   const handleDateChange = (d: string) => {
     setStartDate(d)
     if (preview) {
+      const allTemplates = [...templates, ...newTemplates]
       const rebuilt = buildTrainingPlan(
         {
           name: preview.name,
@@ -177,7 +189,7 @@ function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
             isRest: ws.workoutTemplateId === null,
           })),
         },
-        templates,
+        allTemplates,
         parseISO(d)
       )
       setPreview(rebuilt)
@@ -267,7 +279,7 @@ function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
                 {preview.weeklySchedule.map((day) => (
                   <div key={day.dayOfWeek} className="flex items-center gap-3 text-sm">
                     <span className="w-10 text-slate-500 text-xs">{DAY_NAMES[day.dayOfWeek]}</span>
-                    <span className={day.workoutTemplateId === null && day.label.toLowerCase().includes('rest') ? 'text-slate-600' : 'text-slate-200'}>
+                    <span className={day.workoutTemplateId === null ? 'text-slate-600' : 'text-slate-200'}>
                       {day.label}
                     </span>
                     {day.workoutTemplateId && (
@@ -277,11 +289,23 @@ function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
                 ))}
               </div>
 
+              {newTemplates.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500 font-medium">Workouts to be created</p>
+                  {newTemplates.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between bg-[#0a0f1e] rounded-lg px-3 py-2">
+                      <span className="text-sm text-slate-200">{t.name}</span>
+                      <span className="text-xs text-blue-400">{t.exercises.length} exercises</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <Button variant="secondary" size="md" onClick={() => setStep('upload')} className="flex-1">
                   Back
                 </Button>
-                <Button variant="primary" size="md" onClick={() => onImport(preview)} className="flex-1">
+                <Button variant="primary" size="md" onClick={() => onImport(preview, newTemplates)} className="flex-1">
                   Add Plan
                 </Button>
               </div>
@@ -368,7 +392,9 @@ export function Calendar() {
     dispatch({ type: 'SKIP_SCHEDULED_ENTRY', payload: entryId })
   }
 
-  const handleImport = (plan: TrainingPlan) => {
+  const handleImport = (plan: TrainingPlan, workoutTemplates: WorkoutTemplate[]) => {
+    // Save each parsed workout template to the library first
+    workoutTemplates.forEach((t) => dispatch({ type: 'SAVE_WORKOUT_TEMPLATE', payload: t }))
     dispatch({ type: 'ADD_TRAINING_PLAN', payload: plan })
     setShowImport(false)
   }
@@ -541,6 +567,7 @@ export function Calendar() {
           onClose={() => setShowImport(false)}
           onImport={handleImport}
           templates={state.workoutTemplates}
+          exercises={state.exercises}
         />
       )}
     </div>
