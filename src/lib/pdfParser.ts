@@ -2,10 +2,8 @@ import * as pdfjsLib from 'pdfjs-dist'
 import type { Exercise, ExerciseTemplate, SetTemplate, WorkoutTemplate, MuscleGroup } from '../types'
 import { generateId } from './utils'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).href
+// Use unpkg to load the worker — avoids Vite bundling issues in production
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

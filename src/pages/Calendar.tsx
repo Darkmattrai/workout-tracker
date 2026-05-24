@@ -157,8 +157,9 @@ function ImportModal({ onClose, onImport, templates }: ImportModalProps) {
       const plan = buildTrainingPlan(parsed, templates, parseISO(startDate))
       setPreview(plan)
       setStep('preview')
-    } catch {
-      setError('Failed to read PDF. Please try another file.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(`Failed to read PDF: ${msg}`)
     }
     setLoading(false)
   }
