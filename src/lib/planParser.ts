@@ -61,11 +61,17 @@ export function parsePlanFromText(rawText: string): ParsedPlan {
     const validDayCount = dayIndices.filter((d) => d !== undefined).length
     if (validDayCount < 2) continue
 
-    // Collect subsequent tab-separated rows as label content
+    // Collect subsequent tab-separated rows as label content.
+    // Stop if the row looks like stats (numbers with units, e.g. "4×", "~350 KCAL", "0.8kg").
+    const STAT_ROW = /^[~\d]|^\d+\s*[xX×]/
     const labelsByCol: string[][] = cols.map(() => [])
     for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
       if (!lines[j].includes('\t')) break
       const contentCols = lines[j].split('\t').map((c) => c.trim())
+      // If the majority of non-empty columns look like stats, stop
+      const nonEmpty = contentCols.filter(Boolean)
+      const statLike = nonEmpty.filter((c) => STAT_ROW.test(c)).length
+      if (nonEmpty.length > 0 && statLike / nonEmpty.length >= 0.5) break
       for (let k = 0; k < Math.min(cols.length, contentCols.length); k++) {
         if (contentCols[k]) labelsByCol[k].push(contentCols[k])
       }
@@ -127,11 +133,17 @@ export function parsePlanFromText(rawText: string): ParsedPlan {
   const durMatch = rawText.match(/(\d+)\s*[-–]?\s*weeks?/i)
   if (durMatch) durationWeeks = Math.min(Math.max(parseInt(durMatch[1]), 1), 52)
 
-  // Extract plan name: first short meaningful line that isn't a day name
+  // Extract plan name: first short meaningful line that isn't a day name, pure numbers, or all-caps run-on
   let name = 'Training Plan'
   for (const line of lines) {
     const clean = line.replace(/\t.*/, '').trim()
-    if (clean.length > 5 && clean.length < 60 && !Object.keys(DAY_MAP).some((d) => clean.toLowerCase().startsWith(d))) {
+    if (
+      clean.length > 3 &&
+      clean.length < 60 &&
+      !Object.keys(DAY_MAP).some((d) => clean.toLowerCase().startsWith(d)) &&
+      !/^\d/.test(clean) &&           // skip lines starting with numbers
+      !/^[A-Z\s]{10,}$/.test(clean)   // skip all-caps run-on words (like YOURPERSONALFITNESSPLAN)
+    ) {
       name = clean
       break
     }
