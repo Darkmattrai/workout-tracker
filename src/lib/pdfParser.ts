@@ -42,17 +42,28 @@ export async function extractTextFromPDF(file: File): Promise<string> {
         if (Math.abs(yDiff) > 3) return yDiff
         return a.transform[4] - b.transform[4]
       })
-    // Group into lines by Y position
+    // Group into lines by Y position; use \t to mark large horizontal gaps (card/column layouts)
+    const COL_GAP = 20  // PDF points — inter-column gap threshold
     const lines: string[] = []
     let currentLine = ''
     let lastY = -1
+    let lastXEnd = -1
     for (const item of items) {
       const y = Math.round(item.transform[5])
-      if (lastY !== -1 && Math.abs(y - lastY) > 3) {
+      const x = item.transform[4]
+      const xEnd = x + ((item as { width?: number }).width ?? 0)
+      const isNewRow = lastY !== -1 && Math.abs(y - lastY) > 3
+      const isNewCol = !isNewRow && lastXEnd > 0 && x - lastXEnd > COL_GAP
+      if (isNewRow) {
         if (currentLine.trim()) lines.push(currentLine.trim())
         currentLine = item.str
+        lastXEnd = xEnd
+      } else if (isNewCol) {
+        currentLine += '\t' + item.str
+        lastXEnd = Math.max(lastXEnd, xEnd)
       } else {
         currentLine += (currentLine && item.str && !currentLine.endsWith(' ') ? ' ' : '') + item.str
+        lastXEnd = Math.max(lastXEnd, xEnd)
       }
       lastY = y
     }
