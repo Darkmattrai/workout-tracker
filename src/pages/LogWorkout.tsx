@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Plus, Trash2, Timer, StopCircle, X } from 'lucide-react'
 import { TopBar } from '../components/layout/TopBar'
 import { Button } from '../components/ui/Button'
@@ -78,6 +78,8 @@ export function LogWorkout() {
   const { state, dispatch } = useAppContext()
   const navigate = useNavigate()
   const { workoutId } = useParams<{ workoutId: string }>()
+  const [searchParams] = useSearchParams()
+  const scheduledEntryId = searchParams.get('scheduled')
 
   const [session, setSession] = useState<WorkoutSession | null>(null)
   const [elapsed, setElapsed] = useState(0)
@@ -253,18 +255,24 @@ export function LogWorkout() {
     if (!session) return
     const completedSets = session.exercises.flatMap((e) => e.sets).filter((s) => s.completed)
     const totalVolume = completedSets.reduce((sum, s) => sum + s.actualWeight * s.actualReps, 0)
-    dispatch({
-      type: 'COMPLETE_SESSION',
-      payload: {
-        ...session,
-        completedAt: session.completedAt ?? new Date().toISOString(),
-        durationSeconds: elapsed,
-        totalVolume,
-        totalSets: completedSets.length,
-        status: 'completed',
-      },
-    })
-    navigate('/history')
+    const finalSession = {
+      ...session,
+      completedAt: session.completedAt ?? new Date().toISOString(),
+      durationSeconds: elapsed,
+      totalVolume,
+      totalSets: completedSets.length,
+      status: 'completed' as const,
+    }
+    dispatch({ type: 'COMPLETE_SESSION', payload: finalSession })
+    if (scheduledEntryId) {
+      dispatch({
+        type: 'COMPLETE_SCHEDULED_ENTRY',
+        payload: { entryId: scheduledEntryId, sessionId: finalSession.id },
+      })
+      navigate('/calendar')
+    } else {
+      navigate('/history')
+    }
   }
 
   const handleAbandon = () => {

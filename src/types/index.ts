@@ -133,10 +133,40 @@ export interface UserProfile {
   joinedAt: string
 }
 
+// ─── Training Plans & Calendar ───────────────────────────────────────────────
+
+export interface WeeklyScheduleDay {
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6   // 0 = Sunday
+  workoutTemplateId: string | null          // null = rest day
+  label: string                             // "Workout A", "Cardio", "Rest"
+  color?: string                            // optional color hint from PDF
+}
+
+export interface ScheduledEntry {
+  id: string
+  date: string                              // YYYY-MM-DD
+  workoutTemplateId: string | null
+  label: string
+  completedSessionId?: string
+  status: 'scheduled' | 'completed' | 'rest' | 'skipped'
+}
+
+export interface TrainingPlan {
+  id: string
+  name: string
+  startDate: string                         // YYYY-MM-DD
+  durationWeeks: number
+  weeklySchedule: WeeklyScheduleDay[]
+  entries: ScheduledEntry[]
+  createdAt: string
+}
+
 export interface AppState {
   profile: UserProfile
   exercises: Exercise[]
   workoutTemplates: WorkoutTemplate[]
   workoutSessions: WorkoutSession[]
   activeSession: WorkoutSession | null
+  trainingPlans: TrainingPlan[]
+  activePlanId: string | null
 }

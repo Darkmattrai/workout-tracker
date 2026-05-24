@@ -9,6 +9,7 @@ import {
   TrendingUp,
   User,
   LogOut,
+  CalendarDays,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useAppContext } from '../../context/AppContext'
@@ -21,12 +22,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard',    path: '/',         icon: LayoutDashboard },
-  { label: 'Workouts',     path: '/workouts', icon: ListChecks },
-  { label: 'Log Workout',  path: '/log',      icon: Play },
-  { label: 'History',      path: '/history',  icon: History },
-  { label: 'Progress',     path: '/progress', icon: TrendingUp },
-  { label: 'Profile',      path: '/profile',  icon: User },
+  { label: 'Dashboard',    path: '/',          icon: LayoutDashboard },
+  { label: 'Workouts',     path: '/workouts',  icon: ListChecks },
+  { label: 'Calendar',     path: '/calendar',  icon: CalendarDays },
+  { label: 'Log Workout',  path: '/log',       icon: Play },
+  { label: 'History',      path: '/history',   icon: History },
+  { label: 'Progress',     path: '/progress',  icon: TrendingUp },
+  { label: 'Profile',      path: '/profile',   icon: User },
 ]
 
 export function Sidebar() {

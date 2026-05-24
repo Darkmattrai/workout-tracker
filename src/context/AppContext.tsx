@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
-import { AppState, UserProfile, Exercise, WorkoutTemplate, WorkoutSession } from '../types'
+import { AppState, UserProfile, Exercise, WorkoutTemplate, WorkoutSession, TrainingPlan, ScheduledEntry } from '../types'
 import { loadState, saveState } from '../lib/storage'
 import { DEFAULT_EXERCISES } from '../constants/exercises'
 
@@ -22,6 +22,8 @@ function makeDefaultState(name = 'Athlete'): AppState {
     workoutTemplates: [],
     workoutSessions: [],
     activeSession: null,
+    trainingPlans: [],
+    activePlanId: null,
   }
 }
 
@@ -37,6 +39,11 @@ type AppAction =
   | { type: 'COMPLETE_SESSION'; payload: WorkoutSession }
   | { type: 'ABANDON_SESSION' }
   | { type: 'DELETE_SESSION'; payload: string }
+  | { type: 'ADD_TRAINING_PLAN'; payload: TrainingPlan }
+  | { type: 'DELETE_TRAINING_PLAN'; payload: string }
+  | { type: 'SET_ACTIVE_PLAN'; payload: string | null }
+  | { type: 'COMPLETE_SCHEDULED_ENTRY'; payload: { entryId: string; sessionId: string } }
+  | { type: 'SKIP_SCHEDULED_ENTRY'; payload: string }
   | { type: 'IMPORT_STATE'; payload: AppState }
   | { type: 'CLEAR_ALL_DATA' }
 
@@ -105,6 +112,47 @@ function reducer(state: AppState, action: AppAction): AppState {
         workoutSessions: state.workoutSessions.filter((s) => s.id !== action.payload),
       }
 
+    case 'ADD_TRAINING_PLAN':
+      return {
+        ...state,
+        trainingPlans: [action.payload, ...state.trainingPlans],
+        activePlanId: action.payload.id,
+      }
+
+    case 'DELETE_TRAINING_PLAN':
+      return {
+        ...state,
+        trainingPlans: state.trainingPlans.filter((p) => p.id !== action.payload),
+        activePlanId: state.activePlanId === action.payload ? null : state.activePlanId,
+      }
+
+    case 'SET_ACTIVE_PLAN':
+      return { ...state, activePlanId: action.payload }
+
+    case 'COMPLETE_SCHEDULED_ENTRY':
+      return {
+        ...state,
+        trainingPlans: state.trainingPlans.map((plan) => ({
+          ...plan,
+          entries: plan.entries.map((entry) =>
+            entry.id === action.payload.entryId
+              ? { ...entry, status: 'completed' as const, completedSessionId: action.payload.sessionId }
+              : entry
+          ),
+        })),
+      }
+
+    case 'SKIP_SCHEDULED_ENTRY':
+      return {
+        ...state,
+        trainingPlans: state.trainingPlans.map((plan) => ({
+          ...plan,
+          entries: plan.entries.map((entry) =>
+            entry.id === action.payload ? { ...entry, status: 'skipped' as const } : entry
+          ),
+        })),
+      }
+
     case 'IMPORT_STATE':
       return action.payload
 
@@ -132,7 +180,11 @@ interface AppProviderProps {
 export function AppProvider({ children, userId, userName }: AppProviderProps) {
   const [state, dispatch] = useReducer(reducer, undefined, () => {
     const loaded = loadState(userId)
-    if (loaded) return loaded
+    if (loaded) return {
+      ...loaded,
+      trainingPlans: loaded.trainingPlans ?? [],
+      activePlanId: loaded.activePlanId ?? null,
+    }
     return makeDefaultState(userName)
   })
 

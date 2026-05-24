@@ -11,6 +11,7 @@ import { LogWorkout } from './pages/LogWorkout'
 import { WorkoutHistory } from './pages/WorkoutHistory'
 import { ExerciseProgress } from './pages/ExerciseProgress'
 import { Profile } from './pages/Profile'
+import { Calendar } from './pages/Calendar'
 import { AuthPage } from './pages/AuthPage'
 import { Timer } from 'lucide-react'
 
@@ -50,6 +51,7 @@ function AppLayout() {
             <Route path="/workouts" element={<WorkoutLibrary />} />
             <Route path="/workouts/create" element={<CreateWorkout />} />
             <Route path="/workouts/:id/edit" element={<CreateWorkout />} />
+            <Route path="/calendar" element={<Calendar />} />
             <Route path="/log" element={<LogWorkout />} />
             <Route path="/log/:workoutId" element={<LogWorkout />} />
             <Route path="/history" element={<WorkoutHistory />} />
