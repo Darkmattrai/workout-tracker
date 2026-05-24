@@ -4,7 +4,12 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(npm install:*)",
       "Bash(wait)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(vercel --yes --prod)",
+      "Bash(vercel --yes --prod --name workout-tracker)",
+      "Bash(vercel ls:*)",
+      "Bash(vercel alias:*)",
+      "Bash(vercel inspect:*)"
     ]
   }
 }
